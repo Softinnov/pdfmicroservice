@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -23,7 +24,28 @@ func Error(w http.ResponseWriter, e error, code int) {
 
 func main() {
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/unit", func(w http.ResponseWriter, r *http.Request) {
+
+		pdfNames := []string{}
+
+		// Copie de la requête dans le fichier HTML
+		d := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+
+		d.Decode(&pdfNames)
+
+		// Unit les PDFs entre eux
+		cmd := exec.Command("pdfunite", pdfNames...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		e := cmd.Run()
+		Error(w, e, http.StatusInternalServerError)
+
+		log.Printf("PDF done with %q\n", pdfNames)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/pdf", func(w http.ResponseWriter, r *http.Request) {
 		hfname := fmt.Sprintf("%x.html", &w)
 		pfname := fmt.Sprintf("%x.pdf", &w)
 		defer r.Body.Close()
