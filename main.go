@@ -11,9 +11,6 @@ import (
 )
 
 func Error(w http.ResponseWriter, e error, code int) {
-	if e == nil {
-		return
-	}
 	log.Printf("Error: %q", e)
 	w.WriteHeader(code)
 	_, err := fmt.Fprintf(w, "%v", e)
@@ -24,7 +21,7 @@ func Error(w http.ResponseWriter, e error, code int) {
 
 func main() {
 
-	http.HandleFunc("/unit", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/pdfunite", func(w http.ResponseWriter, r *http.Request) {
 
 		pdfNames := []string{}
 
@@ -39,7 +36,10 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		e := cmd.Run()
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 
 		log.Printf("PDF done with %q\n", pdfNames)
 		w.WriteHeader(http.StatusOK)
@@ -52,12 +52,18 @@ func main() {
 
 		// Création du fichier HTML
 		f, e := os.Create(hfname)
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 		defer os.Remove(f.Name())
 
 		// Copie de la requête dans le fichier HTML
 		_, e = io.Copy(f, r.Body)
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 		f.Close()
 
 		// Transformation du HTML en PDF
@@ -65,16 +71,25 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		e = cmd.Run()
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 
 		// Ouverture du nouveau fichier PDF
 		pf, e := os.Open(pfname)
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 		defer os.Remove(pf.Name())
 
 		// Renvoie du fichier PDF dans la requête
 		_, e = io.Copy(w, pf)
-		Error(w, e, http.StatusInternalServerError)
+		if e != nil {
+			Error(w, e, http.StatusInternalServerError)
+			return
+		}
 		pf.Close()
 	})
 
