@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func Error(w http.ResponseWriter, e error, code int) {
@@ -22,6 +22,7 @@ func Error(w http.ResponseWriter, e error, code int) {
 func main() {
 
 	http.HandleFunc("/pdfunite", func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.URL)
 
 		pdfNames := []string{}
 
@@ -46,51 +47,32 @@ func main() {
 	})
 
 	http.HandleFunc("/pdf", func(w http.ResponseWriter, r *http.Request) {
-		hfname := fmt.Sprintf("%x.html", &w)
-		pfname := fmt.Sprintf("%x.pdf", &w)
-		defer r.Body.Close()
+		log.Println(r.URL)
 
-		// Création du fichier HTML
-		f, e := os.Create(hfname)
-		if e != nil {
-			Error(w, e, http.StatusInternalServerError)
-			return
-		}
-		defer os.Remove(f.Name())
+		v := r.URL.Query()
 
-		// Copie de la requête dans le fichier HTML
-		_, e = io.Copy(f, r.Body)
-		if e != nil {
-			Error(w, e, http.StatusInternalServerError)
-			return
-		}
-		f.Close()
+		htmlPath := v.Get("file")
+		header := v.Get("header")
+		footer := v.Get("footer")
+
+		pdfPath := strings.Replace(htmlPath, ".html", ".pdf", 1)
+		fmt.Printf("html: %q\n", htmlPath)
+		fmt.Printf("pdf : %q\n", pdfPath)
 
 		// Transformation du HTML en PDF
-		cmd := exec.Command("wkhtmltopdf", f.Name(), pfname)
+		cmd := exec.Command("wkhtmltopdf", "--header-html", header,
+			"--footer-html", footer,
+			string(htmlPath), pdfPath)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		e = cmd.Run()
+		e := cmd.Run()
 		if e != nil {
 			Error(w, e, http.StatusInternalServerError)
 			return
 		}
-
-		// Ouverture du nouveau fichier PDF
-		pf, e := os.Open(pfname)
-		if e != nil {
-			Error(w, e, http.StatusInternalServerError)
-			return
-		}
-		defer os.Remove(pf.Name())
-
-		// Renvoie du fichier PDF dans la requête
-		_, e = io.Copy(w, pf)
-		if e != nil {
-			Error(w, e, http.StatusInternalServerError)
-			return
-		}
-		pf.Close()
+		log.Printf("PDF done for %q\n", pdfPath)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(pdfPath))
 	})
 
 	log.Printf("listening on port :8000")
