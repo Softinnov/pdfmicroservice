@@ -59,10 +59,19 @@ func main() {
 		fmt.Printf("html: %q\n", htmlPath)
 		fmt.Printf("pdf : %q\n", pdfPath)
 
+		cmds := []string{
+			"wkhtmltopdf",
+		}
+		if header != "" {
+			cmds = append(cmds, "--header-html", header)
+		}
+		if footer != "" {
+			cmds = append(cmds, "--footer-html", footer)
+		}
+		cmds = append(cmds, string(htmlPath), pdfPath)
+
 		// Transformation du HTML en PDF
-		cmd := exec.Command("wkhtmltopdf", "--header-html", header,
-			"--footer-html", footer,
-			string(htmlPath), pdfPath)
+		cmd := exec.Command(cmds[0], cmds[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		e := cmd.Run()
