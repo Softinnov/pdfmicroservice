@@ -5,7 +5,7 @@ RUN apt-get update
 
 # Download and install wkhtmltopdf
 RUN apt-get install -y build-essential xorg libssl-dev libxrender-dev wget gdebi poppler-utils
-RUN wget http://downloads.sourceforge.net/project/wkhtmltopdf/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
+RUN wget http://download.gna.org/wkhtmltopdf/0.12/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
 RUN gdebi --n wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
 
 EXPOSE 8000
